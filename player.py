@@ -42,7 +42,7 @@ class HumanPlayer(Player):
             board.drop_piece(row, col, self.piece)
             self.increment_move_count()
             if board.winning_move(self.piece):
-                print(f"PLAYER {self.player_number} WINS!")
+                print(f"PLAYER {self.player_number} WINS! with {self.move_count} moves!")
                 label = font.render(f"PLAYER {self.player_number} WINS!\n Takes {self.move_count} moves!", 1, self.color)
                 screen.blit(label, (40, 10))
                 not_over[0] = False
@@ -109,53 +109,113 @@ class AIPlayer(Player):
         return (board.winning_move(1) or board.winning_move(2) or board.is_full())
 
     def minimax(self, board, depth, alpha, beta, maximizingPlayer):
-        valid_locations = board.get_valid_locations()
-        is_terminal = self.is_terminal_node(board)
-        if depth == 0 or is_terminal:
-            if is_terminal:
-                if board.winning_move(self.piece):
-                    return (None, 100000000000000)
-                elif board.winning_move(1 if self.piece == 2 else 2):
-                    return (None, -10000000000000)
-                else:  # Game is over, no more valid moves
-                    return (None, 0)
-            else:  # Depth is zero
-                return (None, self.score_position(board, self.piece))
-        if maximizingPlayer:
-            value = -math.inf
-            best_col = random.choice(valid_locations)
-            for col in valid_locations:
-                row = board.get_next_open_row(col)
-                b_copy = Board(board.get_row(),board.get_col())
-                b_copy.board = np.copy(board.board)
-                b_copy.drop_piece(row, col, self.piece)
-                new_score = self.minimax(b_copy, depth-1, alpha, beta, False)[1]
-                if new_score > value:
-                    value = new_score
-                    best_col = col
-                alpha = max(alpha, value)
-                if alpha >= beta:
-                    break
-            return best_col, value
-        else:  # Minimizing player
-            value = math.inf
-            best_col = random.choice(valid_locations)
-            opp_piece = 1 if self.piece == 2 else 2
-            for col in valid_locations:
-                row = board.get_next_open_row(col)
-                b_copy = Board(board.get_row(),board.get_col())
-                b_copy.board = np.copy(board.board)
-                b_copy.drop_piece(row, col, opp_piece)
-                new_score = self.minimax(b_copy, depth-1, alpha, beta, True)[1]
-                if new_score < value:
-                    value = new_score
-                    best_col = col
-                beta = min(beta, value)
-                if alpha >= beta:
-                    break
-            return best_col, value
+        # valid_locations = board.get_valid_locations()
+        # is_terminal = self.is_terminal_node(board)
+        # if depth == 0 or is_terminal:
+        #     if is_terminal:
+        #         if board.winning_move(self.piece):
+        #             return (None, 100000000000000)
+        #         elif board.winning_move(1 if self.piece == 2 else 2):
+        #             return (None, -10000000000000)
+        #         else:  # Game is over, no more valid moves
+        #             return (None, 0)
+        #     else:  # Depth is zero
+        #         return (None, self.score_position(board, self.piece))
+        # if maximizingPlayer:
+        #     value = -math.inf
+        #     best_col = random.choice(valid_locations)
+        #     for col in valid_locations:
+        #         row = board.get_next_open_row(col)
+        #         b_copy = Board(board.get_row(),board.get_col())
+        #         b_copy.board = np.copy(board.board)
+        #         b_copy.drop_piece(row, col, self.piece)
+        #         new_score = self.minimax(b_copy, depth-1, alpha, beta, False)[1]
+        #         if new_score > value:
+        #             value = new_score
+        #             best_col = col
+        #         alpha = max(alpha, value)
+        #         if alpha >= beta:
+        #             break
+        #     return best_col, value
+        # else:  # Minimizing player
+        #     value = math.inf
+        #     best_col = random.choice(valid_locations)
+        #     opp_piece = 1 if self.piece == 2 else 2
+        #     for col in valid_locations:
+        #         row = board.get_next_open_row(col)
+        #         b_copy = Board(board.get_row(),board.get_col())
+        #         b_copy.board = np.copy(board.board)
+        #         b_copy.drop_piece(row, col, opp_piece)
+        #         new_score = self.minimax(b_copy, depth-1, alpha, beta, True)[1]
+        #         if new_score < value:
+        #             value = new_score
+        #             best_col = col
+        #         beta = min(beta, value)
+        #         if alpha >= beta:
+        #             break
+        #     return best_col, value
 
+            valid_locations = board.get_valid_locations()
+            is_terminal = self.is_terminal_node(board)
 
+            # Check if the node is terminal or depth limit is reached
+            if depth == 0 or is_terminal:
+                if is_terminal:
+                    if board.winning_move(self.piece):
+                        return (None, 100000000000000)  # Win
+                    elif board.winning_move(1 if self.piece == 2 else 2):
+                        return (None, -10000000000000)  # Loss
+                    else:
+                        return (None, 0)  # Draw
+                else:
+                    return (None, self.score_position(board, self.piece))
+
+            if maximizingPlayer:
+                value = -math.inf
+                best_col = random.choice(valid_locations)
+                for col in sorted(valid_locations, key=lambda x: self.heuristic(board, x, self.piece),
+                                  reverse=True):  # Sort moves
+                    row = board.get_next_open_row(col)
+                    b_copy = Board(board.get_row(), board.get_col())
+                    b_copy.board = np.copy(board.board)
+                    b_copy.drop_piece(row, col, self.piece)
+
+                    new_score = self.minimax(b_copy, depth - 1, alpha, beta, False)[1]
+                    if new_score > value:
+                        value = new_score
+                        best_col = col
+                    alpha = max(alpha, value)
+                    if alpha >= beta:
+                        break  # Alpha-beta pruning
+                return best_col, value
+            else:  # Minimizing player
+                value = math.inf
+                best_col = random.choice(valid_locations)
+                opp_piece = 1 if self.piece == 2 else 2
+                for col in sorted(valid_locations, key=lambda x: self.heuristic(board, x, opp_piece)):  # Sort moves
+                    row = board.get_next_open_row(col)
+                    b_copy = Board(board.get_row(), board.get_col())
+                    b_copy.board = np.copy(board.board)
+                    b_copy.drop_piece(row, col, opp_piece)
+
+                    new_score = self.minimax(b_copy, depth - 1, alpha, beta, True)[1]
+                    if new_score < value:
+                        value = new_score
+                        best_col = col
+                    beta = min(beta, value)
+                    if alpha >= beta:
+                        break  # Alpha-beta pruning
+                return best_col, value
+
+    def heuristic(self, board, col, piece):
+        # Copy the board and simulate the move by dropping a piece in the column
+        row = board.get_next_open_row(col)
+        board_copy = Board(board.get_row(), board.get_col())
+        board_copy.board = np.copy(board.board)
+        board_copy.drop_piece(row, col, piece)
+
+        # Evaluate the board after the move is made
+        return self.score_position(board_copy, piece)
 
     def make_move(self, board ,font,screen,not_over,end_game,col):
 
@@ -164,7 +224,7 @@ class AIPlayer(Player):
             board.drop_piece(row, col, self.piece)
             self.increment_move_count()
             if board.winning_move(self.piece):
-                print(f"PLAYER {self.player_number } WINS!")
+                print(f"PLAYER {self.player_number } WINS! with {self.move_count} moves!")
                 label = font.render(f"PLAYER {self.player_number} WINS!\n Takes {self.move_count} moves!", 1, self.color)
                 screen.blit(label, (40, 10))
                 not_over[0] = False
@@ -183,7 +243,7 @@ class RandomPlayer(Player):
             board.drop_piece(row, col, self.piece)
             self.increment_move_count()
             if board.winning_move(self.piece):
-                print(f"PLAYER {self.player_number} WINS!")
+                print(f"PLAYER {self.player_number} WINS! with {self.move_count} moves! ")
                 label = font.render(f"PLAYER {self.player_number} WINS!\n Takes {self.move_count} moves!", 1, self.color)
                 screen.blit(label, (40, 10))
                 not_over[0] = False

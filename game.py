@@ -107,6 +107,14 @@ class Game:
                     self.turn = (self.turn + 1) % 2
                     self.current_player = self.players[self.turn]
 
+            if not any(self.board.is_valid_location(col) for col in range(COLS)) and not self.game_over:
+                pygame.draw.rect(self.screen, BLACK, (0, 0, self.width, SQUARESIZE))
+                label = self.font.render("Draw!", True, (255, 255, 255))
+                self.screen.blit(label, (40, 10))
+                pygame.display.update()
+                pygame.time.wait(3000)
+                self.end_game()
+
 def get_valid_locations(self,board):
         valid_locations = []
 
@@ -119,9 +127,11 @@ def get_valid_locations(self,board):
 
 
 if __name__ == "__main__":
-    # player1 = AIPlayer(1,1,RED)
-    # player2 = AIPlayer(2,2,YELLOW)
-    player1 = RandomPlayer(1,1,RED)
-    player2 = RandomPlayer(2,2,YELLOW)
+    player1 = AIPlayer(1,1,RED)
+    player2 = AIPlayer(2,2,YELLOW)
+    # player1 = RandomPlayer(1,1,RED)
+    # player2 = RandomPlayer(2,2,YELLOW)
+    player1 = HumanPlayer(1,1,RED)
+    player2 = HumanPlayer(2,2,YELLOW)
     game = Game(player1, player2)
     game.run()
