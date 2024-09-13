@@ -1,10 +1,10 @@
 
 import pygame
 import sys
-import math
 import random
+import math
 from board import Board
-from player import HumanPlayer,AIPlayer,RandomPlayer
+from player import HumanPlayer, AIPlayer, QLearningPlayer, RandomPlayer
 
 ROWS = 6
 COLS = 7
@@ -18,11 +18,12 @@ PLAYER_TURN = 0
 AI_TURN = 1
 PLAYER_PIECE = 1
 AI_PIECE = 2
+
 class Game:
     def __init__(self, player1, player2):
-        self.board = Board(ROWS,COLS)
+        self.board = Board(ROWS, COLS)
         self.players = [player1, player2]
-        self.turn = random.randint(PLAYER_TURN,AI_TURN)
+        self.turn = random.randint(PLAYER_TURN, AI_TURN)
         self.current_player = self.players[self.turn]
         self.game_over = False
         self.not_over = [True]
@@ -41,71 +42,69 @@ class Game:
     def end_game(self):
         self.game_over = True
 
+    def reset(self):
+        self.board = Board(ROWS, COLS)
+        self.turn = random.randint(PLAYER_TURN, AI_TURN)
+        self.current_player = self.players[self.turn]
+        self.game_over = False
+        self.not_over = [True]
+        self.draw_board()
+        pygame.display.update()
+
     def run(self):
-
+        winner = None  # Track the winner
         while not self.game_over:
-
-            # for every player event
             for event in pygame.event.get():
-
-                # if player clses the window
                 if event.type == pygame.QUIT:
                     sys.exit()
 
-                # if player moves the mouse, their piece moves at the top of the screen
                 if event.type == pygame.MOUSEMOTION and self.not_over[0]:
                     pygame.draw.rect(self.screen, BLACK, (0, 0, self.width, SQUARESIZE))
                     xpos = pygame.mouse.get_pos()[0]
                     if self.turn == PLAYER_TURN:
                         pygame.draw.circle(self.screen, RED, (xpos, int(SQUARESIZE / 2)), self.circle_radius)
 
-                # if player clicks the button, we drop their piece down
                 if event.type == pygame.MOUSEBUTTONDOWN and self.not_over[0]:
                     pygame.draw.rect(self.screen, BLACK, (0, 0, self.width, SQUARESIZE))
-
-                    # ask for player 1 inupt
-                    if isinstance(self.current_player,HumanPlayer):
-
-                        # we assume players will use correct input
+                    if isinstance(self.current_player, HumanPlayer):
                         xpos = event.pos[0]
-                        col = int(math.floor(xpos / SQUARESIZE))
-
-                        self.current_player.make_move(self.board,self.font,self.screen,self.not_over,self.end_game,col)
-
+                        col = int(xpos // SQUARESIZE)
+                        self.current_player.make_move(self.board, self.font, self.screen, self.not_over, self.end_game, col)
                         self.draw_board()
-
-                        # increment turn by 1
-                        self.turn += 1
-
-                        # this will alternate between 0 and 1 withe very turn
-                        self.turn = self.turn % 2
+                        self.turn = (self.turn + 1) % 2
                         self.current_player = self.players[self.turn]
 
                 pygame.display.update()
 
-            # if its the AI's turn
-            if isinstance(self.current_player,AIPlayer) and not self.game_over and self.not_over[0]:
-
-                col, minimax_score = self.current_player.minimax(self.board,5, -math.inf, math.inf, True)
-
-                if self.board.is_valid_location( col):
-                    self.current_player.make_move(self.board,self.font,self.screen,self.not_over,self.end_game,col)
-
+            if isinstance(self.current_player, AIPlayer) and not self.game_over and self.not_over[0]:
+                col, minimax_score = self.current_player.minimax(self.board, 5, -math.inf, math.inf, True)
+                if self.board.is_valid_location(col):
+                    self.current_player.make_move(self.board, self.font, self.screen, self.not_over, self.end_game, col)
                 self.draw_board()
-                self.turn += 1
-                # this will alternate between 0 and 1 withe very turn
-                self.turn = self.turn % 2
+                self.turn = (self.turn + 1) % 2
+                self.current_player = self.players[self.turn]
+
+            if isinstance(self.current_player, QLearningPlayer) and not self.game_over and self.not_over[0]:
+                best_move = self.current_player.findBestMove(self.board)
+                if self.board.is_valid_location(best_move):
+                    self.current_player.make_move(self.board, self.font, self.screen, self.not_over, self.end_game, best_move)
+                self.draw_board()
+                self.turn = (self.turn + 1) % 2
                 self.current_player = self.players[self.turn]
 
             if isinstance(self.current_player, RandomPlayer) and not self.game_over and self.not_over[0]:
-                # Randomly select a column to drop the piece in
+                self.current_player.make_move(self.board, self.font, self.screen, self.not_over, self.end_game)
+                self.draw_board()
+                self.turn = (self.turn + 1) % 2
+                self.current_player = self.players[self.turn]
 
-                    self.current_player.make_move(self.board, self.font, self.screen, self.not_over, self.end_game, 0)
-                    self.draw_board()
-
-                    # Alternate the turn
-                    self.turn = (self.turn + 1) % 2
-                    self.current_player = self.players[self.turn]
+            # Check for game over and determine the winner
+            if not self.not_over[0]:
+                if isinstance(self.current_player, QLearningPlayer):
+                    winner = self.current_player.player_number
+                elif isinstance(self.players[(self.turn + 1) % 2], QLearningPlayer):
+                    winner = self.players[(self.turn + 1) % 2].player_number
+                self.end_game()
 
             if not any(self.board.is_valid_location(col) for col in range(COLS)) and not self.game_over:
                 pygame.draw.rect(self.screen, BLACK, (0, 0, self.width, SQUARESIZE))
@@ -115,23 +114,56 @@ class Game:
                 pygame.time.wait(3000)
                 self.end_game()
 
-def get_valid_locations(self,board):
-        valid_locations = []
-
-        for column in range(COLS):
-            if board.is_valid_location(board, column):
-                valid_locations.append(column)
-
-        return valid_locations
-
+        return winner, self.current_player.move_count  # Return winner and move count after the game
 
 
 if __name__ == "__main__":
-    player1 = AIPlayer(1,1,RED)
-    player2 = AIPlayer(2,2,YELLOW)
-    # player1 = RandomPlayer(1,1,RED)
-    # player2 = RandomPlayer(2,2,YELLOW)
-    player1 = HumanPlayer(1,1,RED)
-    player2 = HumanPlayer(2,2,YELLOW)
-    game = Game(player1, player2)
-    game.run()
+    pygame.init()
+    total_moves = 0
+    player1_wins = 0
+    player2_wins = 0
+    total_games = 10
+    for i in range(total_games):
+        print(f"Starting Game {i + 1}")
+
+        # Instantiate Q-Learning players
+        q_learning_player1 = QLearningPlayer(1, 1, RED)
+        q_learning_player2 = QLearningPlayer(2, 2, YELLOW)
+
+        print("Training Q-learning players...")
+        player1, player2 = q_learning_player1.train(1000, ROWS, COLS, q_learning_player1, q_learning_player2)
+        print("Training complete!")
+        # player1 = AIPlayer(1,1,RED)
+        # player2 = AIPlayer(2,2,YELLOW)
+
+        # player1 = RandomPlayer(1,1,RED)
+        # player2 = RandomPlayer(2,2,YELLOW)
+
+        # player1 = HumanPlayer(1,1,RED)
+        # player2 = HumanPlayer(2,2,YELLOW)
+
+        game = Game(player1, player2)
+        winner, move_count = game.run()  # Capture the winner and move count
+
+        # Track the winner and their move count
+        if winner == 1:
+            total_moves += move_count
+            player1_wins += 1
+        elif winner == 2:
+            total_moves += move_count
+            player2_wins += 1
+
+        # Reset the game state after each run
+        game.reset()
+
+
+    # Calculate and print statistics after 10 games
+    avg_moves = total_moves / total_games
+    win_percentage_player1 = (player1_wins / total_games) * 100
+    win_percentage_player2 = (player2_wins / total_games) * 100
+
+    print(f"Average moves by the winner: {avg_moves}")
+    print(f"Player 1 win percentage: {win_percentage_player1}%")
+    print(f"Player 2 win percentage: {win_percentage_player2}%")
+
+    pygame.quit()

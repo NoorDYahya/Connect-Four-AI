@@ -61,6 +61,24 @@ class Board:
                     return True
         return False
 
+    def winner_value(self):
+        """Checks if there's a winner or the game has tied."""
+
+        # Check if player 1 has a winning move
+        if self.winning_move(1):
+            return 1  # Player 1 wins
+
+        # Check if player 2 has a winning move
+        if self.winning_move(2):
+            return 2  # Player 2 wins
+
+        # Check if the board is full (i.e., a tie)
+        if all(self.board[0][col] != 0 for col in range(self.col)):
+            return 3  # Game is a tie
+
+        # No winner, no tie, game is still ongoing
+        return 0
+
     def get_valid_locations(self):
         return [col for col in range(self.col) if self.is_valid_location(col)]
 

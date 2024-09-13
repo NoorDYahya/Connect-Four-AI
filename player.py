@@ -1,4 +1,3 @@
-
 import numpy as np
 import pygame
 import sys
@@ -230,6 +229,132 @@ class AIPlayer(Player):
                 not_over[0] = False
                 t = Timer(3.0, end_game)
                 t.start()
+
+# Q-learning constants
+
+WIN_VALUE = 1.0
+LOSS_VALUE = 0.0
+TIED_VALUE = 0.5
+alpha = 0.9  # learning rate
+gamma = 0.95  # discount factor
+q_init = 0.6  # init q table
+import random
+import numpy as np
+
+class QLearningPlayer(Player):
+    def __init__(self, player_number, piece, color):
+        super().__init__(player_number, piece, color)
+        self.QTable = {}
+        self.history = []
+
+    def indexBoard(self, board):
+        """Returns a unique string representation of the board for indexing."""
+        rows = board.get_row()
+        cols = board.get_col()
+        return ''.join(str(board.board[i][j]) for i in range(rows) for j in range(cols))
+
+    def getQValue(self, board_index, cols):
+        """Retrieves or initializes the Q-values for a given board state."""
+        if board_index not in self.QTable:
+            self.QTable[board_index] = q_init * np.ones((cols))
+        return self.QTable[board_index]
+
+    def findBestMove(self, board):
+        """Finds the best move using the current Q-table and updates the history."""
+        board_index = self.indexBoard(board)
+        qValue = self.getQValue(board_index, board.get_col())
+        while True:
+            maxIndex = np.argmax(qValue)  # Get the index of the maximum Q-value
+            if self.checkPosAvaliable(maxIndex, board):
+                break
+            else:
+                qValue[maxIndex] = -1.0  # Mark as invalid
+        self.history.append((board_index, maxIndex))
+        return maxIndex
+
+    def checkPosAvaliable(self, col, board):
+        """Checks if a position in the board is available."""
+        return 0 <= col < board.get_col() and board.board[0][col] == 0
+
+    def finalResult(self, winner, board):
+        """Updates Q-values after the game ends based on the result."""
+        if winner == 3:
+            final_value = TIED_VALUE
+        elif winner == self.player_number:
+            final_value = WIN_VALUE
+        else:
+            final_value = LOSS_VALUE
+
+        self.history.reverse()
+        next_max = -1.0  # For tracking the next max Q-value
+        for board_index, action in self.history:
+            # Retrieve or initialize the Q-values for this board state using board.get_col()
+            qValue = self.getQValue(board_index, board.get_col())
+            if next_max < 0:  # First loop
+                qValue[action] = final_value
+            else:
+                qValue[action] = qValue[action] * (1.0 - alpha) + alpha * gamma * next_max
+
+            next_max = qValue.max()
+            self.QTable[board_index] = qValue
+
+    def newGame(self):
+        """Resets the history for a new game."""
+        self.history = []
+
+    def make_move(self, board, font, screen, not_over, end_game, col=None):
+        pygame.time.wait(500)
+        best_move = self.findBestMove(board)
+        row = board.get_next_open_row(best_move)
+        board.drop_piece(row, best_move, self.piece)
+        self.increment_move_count()
+
+        if board.winning_move(self.piece):
+            print(f"PLAYER Q-learning {self.player_number} WINS! with {self.move_count} moves!")
+            label = font.render(f"PLAYER {self.player_number} WINS!\n Takes {self.move_count} moves!", 1, self.color)
+            screen.blit(label, (40, 10))
+            not_over[0] = False
+            t = Timer(3.0, end_game)
+            t.start()
+
+        winner = board.winner_value()  # Use winner_value to check the game state
+        self.finalResult(winner, board)  # Pass the board object as an argument
+        self.newGame()
+
+    def train(self, trainNum, board_rows, board_cols, playerQ1, playerQ2):
+        """Train the Q-learning player."""
+        cnt = 0
+        while cnt < trainNum:
+            cnt += 1
+            Player1First = random.choice([True, False])
+            board = Board(board_rows, board_cols)
+            playerQ1.newGame()
+            playerQ2.newGame()
+
+            while board.winner_value() == 0:  # Use winner_value to check the game state
+                # First Player
+                playerQ = playerQ1 if Player1First else playerQ2
+                y1 = playerQ.findBestMove(board)
+                row = board.get_next_open_row(y1)
+                board.drop_piece(row, y1, 1 if Player1First else 2)
+
+                if board.winner_value() != 0:
+                    playerQ1.finalResult(board.winner_value(), board)
+                    playerQ2.finalResult(board.winner_value(), board)
+                    break
+                else:
+                    # Second Player
+                    playerQ = playerQ2 if Player1First else playerQ1
+                    y2 = playerQ.findBestMove(board)
+                    row = board.get_next_open_row(y2)
+                    board.drop_piece(row, y2, 2 if Player1First else 1)
+
+                    if board.winner_value() != 0:
+                        playerQ1.finalResult(board.winner_value(), board)
+                        playerQ2.finalResult(board.winner_value(), board)
+                        break
+        return playerQ1, playerQ2
+
 
 
 # random player
