@@ -27,7 +27,7 @@ This project simulates a Connect Four game between various types of AI players, 
 
 1. Clone the repository:
    ```bash
-   git clone <repo-url>
+   git clone <[repo-url](https://github.com/NoorDYahya/Connect-Four-AI.git)>
    cd connect-four-ai
 2. Install the required libraries:
    ```bash
@@ -39,7 +39,7 @@ This project simulates a Connect Four game between various types of AI players, 
 1.Navigate to the directory containing the game files.
 
 2.Run the main.py file:
-    ```bash
+   ```bash
    python main.py
 
 3.By default, the script will run 100 games between two AI players (Minimax and Random Player). The results will be printed after all games are played.
