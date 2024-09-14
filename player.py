@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from threading import Timer
 
 BLUE = (0, 0, 255)
-BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 YELLOW = (255, 255, 0)
 SQUARESIZE = 100
@@ -24,7 +24,8 @@ class Player(ABC):
         return self.piece
     def get_color(self):
         return self.color
-
+    def get_move_count(self):
+        return self.move_count
     def increment_move_count(self):
         self.move_count += 1
     @abstractmethod
@@ -50,7 +51,7 @@ class HumanPlayer(Player):
 
 
 # AIPlayer class for AI moves using minmax strategy with alpha-beta pruning
-class AIPlayer(Player):
+class minMaxPlayer(Player):
 
 
     def evaluate_window(self, window, piece):
@@ -230,81 +231,76 @@ class AIPlayer(Player):
                 t = Timer(3.0, end_game)
                 t.start()
 
-# Q-learning constants
-
-WIN_VALUE = 1.0
-LOSS_VALUE = 0.0
-TIED_VALUE = 0.5
-alpha = 0.9  # learning rate
-gamma = 0.95  # discount factor
-q_init = 0.6  # init q table
-import random
-import numpy as np
 
 class QLearningPlayer(Player):
+    reward = {'win': 1, 'lose': 0, 'draw': 0.5}
     def __init__(self, player_number, piece, color):
         super().__init__(player_number, piece, color)
-        self.QTable = {}
-        self.history = []
+        self.stateAction_values = {}  # Stores state-action values for Q-learning
+        self.state_action_history = []  # To store (state, action) pairs for the current game
+        self.alpha = 0.9   # Learning rate
+        self.gamma = 0.95  # Discount factor
+        self.q_init = 0.6  # Initial Q-table value
 
-    def indexBoard(self, board):
-        """Returns a unique string representation of the board for indexing."""
-        rows = board.get_row()
-        cols = board.get_col()
-        return ''.join(str(board.board[i][j]) for i in range(rows) for j in range(cols))
+    def index_board(self, board):
+        """Returns a string representation of the board to use as a unique index."""
+        return ''.join(map(str, board.board.flatten()))
 
-    def getQValue(self, board_index, cols):
-        """Retrieves or initializes the Q-values for a given board state."""
-        if board_index not in self.QTable:
-            self.QTable[board_index] = q_init * np.ones((cols))
-        return self.QTable[board_index]
+    def get_q_values(self, board_index, cols):
+        """Returns the Q-values for the current board state, initializing if necessary."""
+        if board_index not in self.stateAction_values:
+            self.stateAction_values[board_index] = np.ones(cols) * self.q_init
+        return self.stateAction_values[board_index]
 
-    def findBestMove(self, board):
-        """Finds the best move using the current Q-table and updates the history."""
-        board_index = self.indexBoard(board)
-        qValue = self.getQValue(board_index, board.get_col())
-        while True:
-            maxIndex = np.argmax(qValue)  # Get the index of the maximum Q-value
-            if self.checkPosAvaliable(maxIndex, board):
-                break
-            else:
-                qValue[maxIndex] = -1.0  # Mark as invalid
-        self.history.append((board_index, maxIndex))
-        return maxIndex
+    def is_valid_move(self, col, board):
+        """Checks if a move in the given column is valid."""
+        return 0 <= col < board.get_col() and board.is_valid_location(col)
 
-    def checkPosAvaliable(self, col, board):
-        """Checks if a position in the board is available."""
-        return 0 <= col < board.get_col() and board.board[0][col] == 0
+    def find_best_move(self, board):
+        """Finds the best move based on the Q-table."""
+        board_index = self.index_board(board)
+        q_values = self.get_q_values(board_index, board.get_col())
+        # Pick the best valid move
+        valid_moves = [(col, q_values[col]) for col in range(board.get_col()) if self.is_valid_move(col, board)]
+        if not valid_moves:
+            raise ValueError("No valid moves available")
+        # Choose the move with the highest Q-value
+        best_move = max(valid_moves, key=lambda x: x[1])[0]
+        # Save state-action history for future Q-value updates
+        self.state_action_history.append((board_index, best_move))
+        return best_move
 
-    def finalResult(self, winner, board):
-        """Updates Q-values after the game ends based on the result."""
-        if winner == 3:
-            final_value = TIED_VALUE
-        elif winner == self.player_number:
-            final_value = WIN_VALUE
+    def update_q_values(self, result, board):
+        """Updates the Q-values based on the result of the game."""
+        if result == 3:  # Draw
+            reward = self.reward['draw']
+        elif result == self.player_number:
+            reward = self.reward['win']
         else:
-            final_value = LOSS_VALUE
+            reward = self.reward['lose']
 
-        self.history.reverse()
-        next_max = -1.0  # For tracking the next max Q-value
-        for board_index, action in self.history:
-            # Retrieve or initialize the Q-values for this board state using board.get_col()
-            qValue = self.getQValue(board_index, board.get_col())
-            if next_max < 0:  # First loop
-                qValue[action] = final_value
+        # Update Q-values in reverse order of the move history
+        next_max = None  # Keep track of the next max Q-value for updating
+        for board_index, action in reversed(self.state_action_history):
+            q_values = self.get_q_values(board_index, board.get_col())
+            if next_max is None:
+                q_values[action] = reward
             else:
-                qValue[action] = qValue[action] * (1.0 - alpha) + alpha * gamma * next_max
+                q_values[action] = (1 - self.alpha) * q_values[action] + self.alpha * (reward + self.gamma * next_max)
 
-            next_max = qValue.max()
-            self.QTable[board_index] = qValue
+            next_max = np.max(q_values)  # Next max is the max Q-value from this state
 
-    def newGame(self):
-        """Resets the history for a new game."""
-        self.history = []
+    def reset(self):
+        """Resets the player's state-action history for a new game."""
+        self.state_action_history = []
+
+    def reset_moveCount(self):
+        self.move_count = 0
 
     def make_move(self, board, font, screen, not_over, end_game, col=None):
+        """Executes a move for the Q-learning player."""
         pygame.time.wait(500)
-        best_move = self.findBestMove(board)
+        best_move = self.find_best_move(board)
         row = board.get_next_open_row(best_move)
         board.drop_piece(row, best_move, self.piece)
         self.increment_move_count()
@@ -317,44 +313,30 @@ class QLearningPlayer(Player):
             t = Timer(3.0, end_game)
             t.start()
 
-        winner = board.winner_value()  # Use winner_value to check the game state
-        self.finalResult(winner, board)  # Pass the board object as an argument
-        self.newGame()
+        # Update Q-values based on the game result
+        winner = board.winner_value()
+        self.update_q_values(winner, board)
+        self.reset()
 
-    def train(self, trainNum, board_rows, board_cols, playerQ1, playerQ2):
-        """Train the Q-learning player."""
-        cnt = 0
-        while cnt < trainNum:
-            cnt += 1
-            Player1First = random.choice([True, False])
+    def train(self, train_iterations, board_rows, board_cols, player1, player2):
+        """Trains the Q-learning player against itself."""
+        for iteration in range(train_iterations):
             board = Board(board_rows, board_cols)
-            playerQ1.newGame()
-            playerQ2.newGame()
+            player1.reset()
+            player2.reset()
+            current_player = player1 if random.choice([True, False]) else player2
 
-            while board.winner_value() == 0:  # Use winner_value to check the game state
-                # First Player
-                playerQ = playerQ1 if Player1First else playerQ2
-                y1 = playerQ.findBestMove(board)
-                row = board.get_next_open_row(y1)
-                board.drop_piece(row, y1, 1 if Player1First else 2)
+            while board.winner_value() == 0:
+                best_move = current_player.find_best_move(board)
+                row = board.get_next_open_row(best_move)
+                board.drop_piece(row, best_move, current_player.piece)
+                current_player = player1 if current_player == player2 else player2
 
-                if board.winner_value() != 0:
-                    playerQ1.finalResult(board.winner_value(), board)
-                    playerQ2.finalResult(board.winner_value(), board)
-                    break
-                else:
-                    # Second Player
-                    playerQ = playerQ2 if Player1First else playerQ1
-                    y2 = playerQ.findBestMove(board)
-                    row = board.get_next_open_row(y2)
-                    board.drop_piece(row, y2, 2 if Player1First else 1)
+            result = board.winner_value()
+            player1.update_q_values(result, board)
+            player2.update_q_values(result, board)
 
-                    if board.winner_value() != 0:
-                        playerQ1.finalResult(board.winner_value(), board)
-                        playerQ2.finalResult(board.winner_value(), board)
-                        break
-        return playerQ1, playerQ2
-
+        return player1, player2
 
 
 # random player

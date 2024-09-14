@@ -4,7 +4,7 @@ import pygame
 
 # Constants
 BLUE = (0, 0, 255)
-BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 YELLOW = (255, 255, 0)
 SQUARESIZE = 100
@@ -62,13 +62,9 @@ class Board:
         return False
 
     def winner_value(self):
-        """Checks if there's a winner or the game has tied."""
-
-        # Check if player 1 has a winning move
         if self.winning_move(1):
             return 1  # Player 1 wins
 
-        # Check if player 2 has a winning move
         if self.winning_move(2):
             return 2  # Player 2 wins
 
@@ -90,7 +86,7 @@ class Board:
             for r in range(self.row):
                 pygame.draw.rect(screen, BLUE, (c * SQUARESIZE, r * SQUARESIZE + SQUARESIZE, SQUARESIZE, SQUARESIZE))
                 if self.board[r][c] == 0:
-                    pygame.draw.circle(screen, BLACK, (int(c * SQUARESIZE + SQUARESIZE/2),
+                    pygame.draw.circle(screen, WHITE, (int(c * SQUARESIZE + SQUARESIZE/2),
                                         int(r * SQUARESIZE + SQUARESIZE + SQUARESIZE/2)), CIRCLE_RADIUS)
                 elif self.board[r][c] == 1:
                     pygame.draw.circle(screen, RED, (int(c * SQUARESIZE + SQUARESIZE/2),
