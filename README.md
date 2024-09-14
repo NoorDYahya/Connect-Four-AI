@@ -19,7 +19,7 @@ https://github.com/user-attachments/assets/6d477863-bbe1-43f9-b703-2243298ef739
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.0+
 - External libraries:
   - `pygame`
   - `numpy`
