@@ -1,7 +1,11 @@
 
 
 # Connect Four AI Simulation
-![connect 4 gameplay vs ai](https://i.imgur.com/luzzVlJ.gif)
+
+
+https://github.com/user-attachments/assets/6d477863-bbe1-43f9-b703-2243298ef739
+
+
 
 This project simulates a Connect Four game between various types of AI players, including Minimax, Q-Learning, Random, and Human players. It uses **Pygame** to create a visual representation of the board and supports different game strategies. The main script can run a series of games and gather statistics on the number of moves and win percentages of the players.
 
