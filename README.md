@@ -1,11 +1,46 @@
-# connect4-ai Python
 
-A python implementation of the connect-4 game with different type of players 
 
+# Connect Four AI Simulation
 ![connect 4 gameplay vs ai](https://i.imgur.com/luzzVlJ.gif)
 
-# Type of players
+This project simulates a Connect Four game between various types of AI players, including Minimax, Q-Learning, Random, and Human players. It uses **Pygame** to create a visual representation of the board and supports different game strategies. The main script can run a series of games and gather statistics on the number of moves and win percentages of the players.
 
-- Random Player
-- Human Player
-- AI Player : minimax algorithm with alpha-beta pruning.
+## Features
+
+- AI vs. AI (Minimax with alpha-beta pruning, Q-Learning, Random)
+- Board reset and replay
+- Statistics on games played (win percentages, average moves)
+- Graphical display of the Connect Four board using **Pygame**
+
+## Requirements
+
+- Python 3.8+
+- External libraries:
+  - `pygame`
+  - `numpy`
+
+## Installation
+
+1. Clone the repository:
+   ```bash
+   git clone <repo-url>
+   cd connect-four-ai
+2. Install the required libraries:
+   ```bash
+   pip install numpy pygame
+   
+
+## How to Run
+
+1.Navigate to the directory containing the game files.
+
+2.Run the main.py file:
+    ```bash
+   python main.py
+
+3.By default, the script will run 100 games between two AI players (Minimax and Random Player). The results will be printed after all games are played.
+
+##Future Work
+- Train and include a Q-Learning agent.
+- Add more configurable options for game parameters.
+- Implement advanced AI strategies for more competitive gameplay like .

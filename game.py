@@ -131,7 +131,7 @@ if __name__ == "__main__":
     total_moves_2 = 0
     player1_wins = 0
     player2_wins = 0
-    total_games = 250
+    total_games = 100
     # Instantiate Q-Learning players
     # q_learning_player1 = QLearningPlayer(1, 1, RED)
     # q_learning_player2 = QLearningPlayer(2, 2, YELLOW)
