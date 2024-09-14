@@ -40,7 +40,7 @@ This project simulates a Connect Four game between various types of AI players, 
 
 3.By default, the script will run 100 games between two AI players (Minimax and Random Player). The results will be printed after all games are played.
 
-##Future Work
+## Future Work
 - Train and include a Q-Learning agent.
 - Add more configurable options for game parameters.
 - Implement advanced AI strategies for more competitive gameplay like .
